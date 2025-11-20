@@ -1,9 +1,49 @@
 import requests
 import json
+from pydantic import BaseModel
+from typing import Union
+
+class User(BaseModel):
+    login: str
+    email: str
+    password: str
+    role: Union[str, None] = "basic role"
+    token: Union[str, None] = None
+    id: Union[int, None] = -1
 
 def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
+
+def register_user():
+    print("\n--- Регистрация ---")
+    login = input("Введите логин: ")
+    email = input("Введите email: ")
+    password = input("Введите пароль: ")
+    user_data = {
+        "login": login,
+        "email": email,
+        "password": password
+    }
+    result, code = send_post("http://localhost:8000/users/", user_data)
+    if code == 200:
+        print("Регистрация успешна!")
+    else:
+        print(f"Ошибка при регистрации: {code}")
+
+def auth_user():
+    print("\n--- Авторизация ---")
+    login = input("Введите логин: ")
+    password = input("Введите пароль: ")
+    auth_data = {
+        "login": login,
+        "password": password
+    }
+    result, code = send_post("http://localhost:8000/users/auth", auth_data)
+    if code == 200:
+        print("Авторизация успешна!")
+    else:
+        print("Неверный логин или пароль")
 
 def solve_tsp():
     print("\n--- Решение задачи коммивояжера ---")
@@ -40,13 +80,19 @@ def solve_tsp():
 while True:
     try:
         print("\n" + "="*40)
-        command = int(input("1 – решить TSP\n0 – выход\n>>> "))
-        if command == 1:
-            solve_tsp()
-        elif command == 0:
-            print("Выход из программы...")
-            break
-        else:
-            print("Неизвестная команда")
+        print("Введите команду:")
+        command = int(input("1 – регистрация\n2 – авторизация\n3 – решить TSP\n0 – выход\n>>> "))
+        match command:
+            case 1:
+                register_user()
+            case 2:
+                auth_user()
+            case 3:
+                solve_tsp()
+            case 0:
+                print("Выход из программы...")
+                break
+            case _:
+                print("Неизвестная команда")
     except ValueError:
         print("Неверно введена команда!")
