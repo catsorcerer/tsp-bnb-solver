@@ -2,6 +2,7 @@ import requests
 import json
 from pydantic import BaseModel
 from typing import Union
+import re
 
 class User(BaseModel):
     login: str
@@ -15,11 +16,34 @@ def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
 
+def validate_password(password):
+    """Проверка сложности пароля"""
+    if len(password) < 10:
+        return "Пароль должен содержать не менее 10 символов"
+    if not re.search(r'[A-Z]', password):
+        return "Пароль должен содержать хотя бы одну заглавную букву"
+    if not re.search(r'[a-z]', password):
+        return "Пароль должен содержать хотя бы одну строчную букву"
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return "Пароль должен содержать хотя бы один спецсимвол"
+    return None
+
 def register_user():
     print("\n--- Регистрация ---")
     login = input("Введите логин: ")
     email = input("Введите email: ")
     password = input("Введите пароль: ")
+    
+    password_error = validate_password(password)
+    if password_error:
+        print(f"Ошибка в пароле: {password_error}")
+        return
+    
+    password_confirm = input("Подтвердите пароль: ")
+    if password != password_confirm:
+        print("Ошибка: Пароли не совпадают!")
+        return
+    
     user_data = {
         "login": login,
         "email": email,
