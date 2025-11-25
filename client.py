@@ -3,6 +3,8 @@ import json
 from pydantic import BaseModel
 from typing import Union
 import re
+import time
+import hashlib
 
 class User(BaseModel):
     login: str
@@ -16,10 +18,13 @@ def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
 
-def send_signed_post_v1(url, data, token):
-    """Отправка запроса с подписью Вариант 1: простой токен"""
+def send_signed_post_v2(url, data, token):
+    """Отправка запроса с подписью Вариант 2: хэш от токена и времени"""
+    timestamp = int(time.time())
+    signature = hashlib.sha256(f"{token}_{timestamp}".encode()).hexdigest()
+    
     headers = {
-        'Authorization': f'Bearer {token}'
+        'Authorization': f'Bearer {signature}'
     }
     response = requests.post(url, json=data, headers=headers)
     return response.text, response.status_code
@@ -93,8 +98,7 @@ def auth_user():
 
 def solve_tsp():
     print("Введите матрицу расстояний:")
-    
-    # Сначала получаем токен через авторизацию
+
     token = auth_user()
     if not token:
         return
@@ -119,8 +123,7 @@ def solve_tsp():
         
         tsp_data = {"matrix": matrix}
         
-        # Отправляем подписанный запрос (Вариант 1)
-        result, code = send_signed_post_v1("http://localhost:8000/solve", tsp_data, token)
+        result, code = send_signed_post_v2("http://localhost:8000/solve", tsp_data, token)
         
         if code == 200:
             solution = json.loads(result)
@@ -133,7 +136,7 @@ def solve_tsp():
             except:
                 print("Ошибка решения TSP: Неверные данные")
         elif code == 401:
-            print("Ошибка авторизации: Неверный токен")
+            print("Ошибка авторизации: Неверная подпись запроса")
         else:
             print(f"Ошибка при решении TSP: {code}")
             
