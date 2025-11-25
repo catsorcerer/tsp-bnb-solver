@@ -3,7 +3,6 @@ import json
 from pydantic import BaseModel
 from typing import Union
 import re
-import time
 import hashlib
 
 class User(BaseModel):
@@ -18,10 +17,9 @@ def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
 
-def send_signed_post_v2(url, data, token):
-    """Отправка запроса с подписью Вариант 2: хэш от токена и времени"""
-    timestamp = int(time.time())
-    signature = hashlib.sha256(f"{token}_{timestamp}".encode()).hexdigest()
+def send_signed_post_v3(url, data, token):
+    request_body = json.dumps(data, sort_keys=True)
+    signature = hashlib.sha256(f"{token}_{request_body}".encode()).hexdigest()
     
     headers = {
         'Authorization': f'Bearer {signature}'
@@ -30,7 +28,6 @@ def send_signed_post_v2(url, data, token):
     return response.text, response.status_code
 
 def validate_password(password):
-    """Проверка сложности пароля"""
     if len(password) < 10:
         return "Пароль должен содержать не менее 10 символов"
     if not re.search(r'[A-Z]', password):
@@ -66,7 +63,6 @@ def register_user():
     if code == 200:
         print("Регистрация успешна!")
     elif code == 400:
-
         try:
             error_data = json.loads(result)
             print(f"Ошибка регистрации: {error_data.get('detail', 'Неизвестная ошибка')}")
@@ -98,7 +94,7 @@ def auth_user():
 
 def solve_tsp():
     print("Введите матрицу расстояний:")
-
+    
     token = auth_user()
     if not token:
         return
@@ -123,7 +119,7 @@ def solve_tsp():
         
         tsp_data = {"matrix": matrix}
         
-        result, code = send_signed_post_v2("http://localhost:8000/solve", tsp_data, token)
+        result, code = send_signed_post_v3("http://localhost:8000/solve", tsp_data, token)
         
         if code == 200:
             solution = json.loads(result)
