@@ -29,7 +29,6 @@ def validate_password(password):
     return None
 
 def register_user():
-    print("\n--- Регистрация ---")
     login = input("Введите логин: ")
     email = input("Введите email: ")
     password = input("Введите пароль: ")
@@ -50,13 +49,20 @@ def register_user():
         "password": password
     }
     result, code = send_post("http://localhost:8000/users/", user_data)
+    
     if code == 200:
         print("Регистрация успешна!")
+    elif code == 400:
+
+        try:
+            error_data = json.loads(result)
+            print(f"Ошибка регистрации: {error_data.get('detail', 'Неизвестная ошибка')}")
+        except:
+            print("Ошибка регистрации: Логин уже занят или неверные данные")
     else:
         print(f"Ошибка при регистрации: {code}")
 
 def auth_user():
-    print("\n--- Авторизация ---")
     login = input("Введите логин: ")
     password = input("Введите пароль: ")
     auth_data = {
@@ -64,13 +70,15 @@ def auth_user():
         "password": password
     }
     result, code = send_post("http://localhost:8000/users/auth", auth_data)
+    
     if code == 200:
         print("Авторизация успешна!")
+    elif code == 401:
+        print("Ошибка авторизации: Неверный логин или пароль")
     else:
-        print("Неверный логин или пароль")
+        print(f"Ошибка при авторизации: {code}")
 
 def solve_tsp():
-    print("\n--- Решение задачи коммивояжера ---")
     print("Введите матрицу расстояний:")
     
     try:
@@ -84,6 +92,11 @@ def solve_tsp():
             if len(row) != n:
                 print(f"Ошибка: должно быть {n} чисел в строке")
                 return
+
+            for value in row:
+                if value < 0:
+                    print("Ошибка: Расстояния не могут быть отрицательными")
+                    return
             matrix.append(row)
         
         tsp_data = {"matrix": matrix}
@@ -93,6 +106,12 @@ def solve_tsp():
             solution = json.loads(result)
             print(f"Оптимальный путь: {solution['path']}")
             print(f"Минимальное расстояние: {solution['distance']}")
+        elif code == 400:
+            try:
+                error_data = json.loads(result)
+                print(f"Ошибка решения TSP: {error_data.get('detail', 'Неизвестная ошибка')}")
+            except:
+                print("Ошибка решения TSP: Неверные данные")
         else:
             print(f"Ошибка при решении TSP: {code}")
             
@@ -103,7 +122,6 @@ def solve_tsp():
 
 while True:
     try:
-        print("\n" + "="*40)
         print("Введите команду:")
         command = int(input("1 – регистрация\n2 – авторизация\n3 – решить TSP\n0 – выход\n>>> "))
         match command:
