@@ -139,11 +139,12 @@ def get_user_by_token(token: str) -> Optional[User]:
                     return User(**user_data)
     return None
 
-def verify_signature_v3(authorization: Optional[str], request_body: str) -> Optional[User]:
+def verify_signature_v4(authorization: Optional[str], request_body: str, time_window: int = 300) -> Optional[User]:
     if not authorization or not authorization.startswith("Bearer "):
         return None
     
     received_hash = authorization[7:]
+    current_time = int(time.time())
     
     if not os.path.exists('users/'):
         return None
@@ -153,9 +154,12 @@ def verify_signature_v3(authorization: Optional[str], request_body: str) -> Opti
             with open(f"users/{file}", 'r') as f:
                 user_data = json.load(f)
                 user_token = user_data.get('token')
-                expected_hash = hashlib.sha256(f"{user_token}_{request_body}".encode()).hexdigest()
-                if received_hash == expected_hash:
-                    return User(**user_data)
+                
+                for time_offset in [-time_window, 0, time_window]:
+                    check_time = current_time + time_offset
+                    expected_hash = hashlib.sha256(f"{user_token}_{request_body}_{check_time}".encode()).hexdigest()
+                    if received_hash == expected_hash:
+                        return User(**user_data)
     return None
 
 @app.get("/")
@@ -192,7 +196,7 @@ def solve_tsp(
     authorization: Optional[str] = Header(None)
 ):
     request_body = json.dumps(tsp_request.dict(), sort_keys=True)
-    user = verify_signature_v3(authorization, request_body)
+    user = verify_signature_v4(authorization, request_body)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid signature")
     
