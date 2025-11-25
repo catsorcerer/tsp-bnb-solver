@@ -113,12 +113,29 @@ def solve_tsp_internal(matrix):
         "path": best_path
     }
 
+def is_login_taken(login:str) -> bool:
+
+    if not os.path.exists('users/'):
+        return False
+
+    for file in os.listdir('users/'):
+        if file.endswith('.ison'):
+            with open(f"users/{file}", 'r') as f:
+                user_data = json.load(f)
+                if user_data.get('login') == login:
+                    return True
+    return False
+
 @app.get("/")
 def root_path():
     return {"message": "TSP Solver API", "status": "active"}
 
 @app.post("/users/")
 def create_user(user: User):
+
+    if is_login_taken(user.login):
+        raise HTTPException(status_code=400, detail="Логин уже занят")
+        
     user.id = int(time.time())
     user.token = str(random.getrandbits(128))
     with open(f"users/user_{user.id}.json", 'w') as f:
@@ -140,10 +157,17 @@ def auth_user(params: AuthUser):
 @app.post("/solve", response_model=TSPResponse)
 def solve_tsp(tsp_request: TSPRequest):
     try:
+        matrix = tsp_request.matrix
+        n = len(matrix)
+
+        if n < 2:
+            raise HTTPException(status code = 400, detail="Матрица должна содержать минимум 2 города")
         result = solve_tsp_internal(tsp_request.matrix)
         return TSPResponse(
             distance=result["distance"],
             path=result["path"]
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error solving TSP: {str(e)}")
