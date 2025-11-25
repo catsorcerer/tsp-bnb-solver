@@ -1,11 +1,12 @@
 from typing import Union
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 import json
 import time
 import os
 import random
 import math
+from typing import Optional
 
 app = FastAPI()
 
@@ -125,6 +126,27 @@ def is_login_taken(login:str) -> bool:
                     return True
     return False
 
+def get_user_by_token(token: str) -> Optional[User]:
+    """Поиск пользователя по токену"""
+    if not os.path.exists('users/'):
+        return None
+    
+    for file in os.listdir('users/'):
+        if file.endswith('.json'):
+            with open(f"users/{file}", 'r') as f:
+                user_data = json.load(f)
+                if user_data.get('token') == token:
+                    return User(**user_data)
+    return None
+
+def verify_signature_v1(authorization: Optional[str]) -> Optional[User]:
+    """Вариант 1: Простая проверка токена"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    
+    token = authorization[7:]  
+    return get_user_by_token(token)
+
 @app.get("/")
 def root_path():
     return {"TSP Solver"}
@@ -154,7 +176,14 @@ def auth_user(params: AuthUser):
     raise HTTPException(status_code=401, detail="Invalid login or password")
 
 @app.post("/solve", response_model=TSPResponse)
-def solve_tsp(tsp_request: TSPRequest):
+def solve_tsp(
+    tsp_request: TSPRequest,
+    authorization: Optional[str] = Header(None)
+):
+    user = verify_signature_v1(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
     try:
         matrix = tsp_request.matrix
         n = len(matrix)
