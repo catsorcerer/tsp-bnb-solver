@@ -16,6 +16,14 @@ def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
 
+def send_signed_post_v1(url, data, token):
+    """Отправка запроса с подписью Вариант 1: простой токен"""
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+    response = requests.post(url, json=data, headers=headers)
+    return response.text, response.status_code
+
 def validate_password(password):
     """Проверка сложности пароля"""
     if len(password) < 10:
@@ -72,14 +80,24 @@ def auth_user():
     result, code = send_post("http://localhost:8000/users/auth", auth_data)
     
     if code == 200:
+        user_data = json.loads(result)
         print("Авторизация успешна!")
+        print(f"Ваш токен: {user_data['token']}")
+        return user_data['token']
     elif code == 401:
         print("Ошибка авторизации: Неверный логин или пароль")
+        return None
     else:
         print(f"Ошибка при авторизации: {code}")
+        return None
 
 def solve_tsp():
     print("Введите матрицу расстояний:")
+    
+    # Сначала получаем токен через авторизацию
+    token = auth_user()
+    if not token:
+        return
     
     try:
         n = int(input("Количество городов: "))
@@ -100,7 +118,9 @@ def solve_tsp():
             matrix.append(row)
         
         tsp_data = {"matrix": matrix}
-        result, code = send_post("http://localhost:8000/solve", tsp_data)
+        
+        # Отправляем подписанный запрос (Вариант 1)
+        result, code = send_signed_post_v1("http://localhost:8000/solve", tsp_data, token)
         
         if code == 200:
             solution = json.loads(result)
@@ -112,6 +132,8 @@ def solve_tsp():
                 print(f"Ошибка решения TSP: {error_data.get('detail', 'Неизвестная ошибка')}")
             except:
                 print("Ошибка решения TSP: Неверные данные")
+        elif code == 401:
+            print("Ошибка авторизации: Неверный токен")
         else:
             print(f"Ошибка при решении TSP: {code}")
             
