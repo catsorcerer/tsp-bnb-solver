@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel
 from typing import Union
 import re
+import time
 import hashlib
 
 class User(BaseModel):
@@ -17,9 +18,10 @@ def send_post(url, data):
     response = requests.post(url, json=data)
     return response.text, response.status_code
 
-def send_signed_post_v3(url, data, token):
+def send_signed_post_v4(url, data, token):
     request_body = json.dumps(data, sort_keys=True)
-    signature = hashlib.sha256(f"{token}_{request_body}".encode()).hexdigest()
+    timestamp = int(time.time())
+    signature = hashlib.sha256(f"{token}_{request_body}_{timestamp}".encode()).hexdigest()
     
     headers = {
         'Authorization': f'Bearer {signature}'
@@ -119,7 +121,7 @@ def solve_tsp():
         
         tsp_data = {"matrix": matrix}
         
-        result, code = send_signed_post_v3("http://localhost:8000/solve", tsp_data, token)
+        result, code = send_signed_post_v4("http://localhost:8000/solve", tsp_data, token)
         
         if code == 200:
             solution = json.loads(result)
