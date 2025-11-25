@@ -114,12 +114,11 @@ def solve_tsp_internal(matrix):
     }
 
 def is_login_taken(login:str) -> bool:
-
     if not os.path.exists('users/'):
         return False
 
     for file in os.listdir('users/'):
-        if file.endswith('.ison'):
+        if file.endswith('.json'):
             with open(f"users/{file}", 'r') as f:
                 user_data = json.load(f)
                 if user_data.get('login') == login:
@@ -128,11 +127,11 @@ def is_login_taken(login:str) -> bool:
 
 @app.get("/")
 def root_path():
-    return {"message": "TSP Solver API", "status": "active"}
+    return {"TSP Solver"}
 
 @app.post("/users/")
 def create_user(user: User):
-
+    
     if is_login_taken(user.login):
         raise HTTPException(status_code=400, detail="Логин уже занят")
         
@@ -161,7 +160,13 @@ def solve_tsp(tsp_request: TSPRequest):
         n = len(matrix)
 
         if n < 2:
-            raise HTTPException(status code = 400, detail="Матрица должна содержать минимум 2 города")
+            raise HTTPException(status_code=400, detail="Матрица должна содержать минимум 2 города")
+        
+        for i in range(n):
+            for j in range(n):
+                if matrix[i][j] < 0:
+                    raise HTTPException(status_code=400, detail="Расстояния не могут быть отрицательными")
+        
         result = solve_tsp_internal(tsp_request.matrix)
         return TSPResponse(
             distance=result["distance"],
