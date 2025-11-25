@@ -7,6 +7,7 @@ import os
 import random
 import math
 from typing import Optional
+import hashlib
 
 app = FastAPI()
 
@@ -139,13 +140,30 @@ def get_user_by_token(token: str) -> Optional[User]:
                     return User(**user_data)
     return None
 
-def verify_signature_v1(authorization: Optional[str]) -> Optional[User]:
-    """Вариант 1: Простая проверка токена"""
+def verify_signature_v2(authorization: Optional[str], time_window: int = 300) -> Optional[User]:
+    """Вариант 2: Хэш от токена и времени"""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     
-    token = authorization[7:]  
-    return get_user_by_token(token)
+    received_hash = authorization[7:]
+    current_time = int(time.time())
+    
+    if not os.path.exists('users/'):
+        return None
+    
+    for file in os.listdir('users/'):
+        if file.endswith('.json'):
+            with open(f"users/{file}", 'r') as f:
+                user_data = json.load(f)
+                user_token = user_data.get('token')
+                
+                # Проверяем в временном окне ±5 минут
+                for time_offset in [-time_window, 0, time_window]:
+                    check_time = current_time + time_offset
+                    expected_hash = hashlib.sha256(f"{user_token}_{check_time}".encode()).hexdigest()
+                    if received_hash == expected_hash:
+                        return User(**user_data)
+    return None
 
 @app.get("/")
 def root_path():
@@ -180,9 +198,9 @@ def solve_tsp(
     tsp_request: TSPRequest,
     authorization: Optional[str] = Header(None)
 ):
-    user = verify_signature_v1(authorization)
+    user = verify_signature_v2(authorization)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid signature")
     
     try:
         matrix = tsp_request.matrix
