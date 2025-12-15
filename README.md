@@ -1,4 +1,5 @@
-# A complete solution for the Traveling Salesman Problem using the Branch and Bound algorithm with enhanced authentication and user management.
+# An app that solves the traveling salesman problem using the branch and bound method
+
 ### The solution follows a client-server model:
 
 ### The FastAPI server ([main.py](main.py)) handles all logic: user authentication, TSP calculations using the Branch and Bound algorithm, and data persistence. The console client ([client.py](client.py)) provides an interactive command-line interface for user interaction, sending requests to the server and displaying results.
@@ -19,5 +20,5 @@
   4. Requests
 
 ### Requirements installation:
-     ```python
-     pip install fastapi uvicorn pydantic requests
+   ```python
+   pip install fastapi uvicorn pydantic requests
