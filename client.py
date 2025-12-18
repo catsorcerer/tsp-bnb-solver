@@ -76,56 +76,67 @@ def logout():
     current_user_login = None
 
 def register_user():
-    print("\nРЕГИСТРАЦИЯ")
-    login = input("Введите логин: ")
-    password = input("Введите пароль: ")
+    global current_session_token, current_technical_token, current_user_login
     
-    password_error = validate_password(password)
-    if password_error:
-        print(f"Ошибка в пароле: {password_error}")
-        return
-    
-    if password != input("Подтвердите пароль: "):
-        print("Ошибка: Пароли не совпадают!")
-        return
-    
-    result, code = send_post("http://localhost:8000/users/", {"login": login, "password": password})
-    
-    if code == 200:
-        try:
-            response_data = json.loads(result)
+    while True:
+        print("\nРЕГИСТРАЦИЯ")
+        login = input("Введите логин: ")
+        password = input("Введите пароль: ")
+        
+        password_error = validate_password(password)
+        if password_error:
+            print(f"Ошибка в пароле: {password_error}")
+            continue
+        
+        if password != input("Подтвердите пароль: "):
+            print("Ошибка: Пароли не совпадают!")
+            continue
+        
+        result, code = send_post("http://localhost:8000/users/", {"login": login, "password": password})
+        
+        if code == 200:
             print("Регистрация успешна!")
-            print(f"Ваш технический токен: {response_data.get('token', 'Не получен')}")
-        except:
-            print("Регистрация успешна! (ответ сервера не разобран)")
-    elif code == 400 and result:
-        error_data = json.loads(result)
-        print(f"Ошибка регистрации: {error_data.get('detail', 'Неизвестная ошибка')}")
-    else:
-        print(f"Ошибка при регистрации: {code}")
+            
+            auth_result, auth_code = send_post("http://localhost:8000/users/auth", {"login": login, "password": password})
+            
+            if auth_code == 200 and auth_result:
+                user_data = json.loads(auth_result)
+                current_session_token = user_data['session_token']
+                current_technical_token = user_data['token']
+                current_user_login = user_data['login']
+                print(f"Добро пожаловать, {current_user_login}!")
+                return
+                
+        elif code == 400 and result:
+            try:
+                error_data = json.loads(result)
+                print(f"Ошибка регистрации: {error_data.get('detail', 'Неизвестная ошибка')}")
+            except:
+                print("Ошибка регистрации (некорректный ответ сервера)")
+        else:
+            print(f"Ошибка при регистрации: {code}")
 
 def auth_user():
     global current_session_token, current_technical_token, current_user_login
     
-    print("\nАВТОРИЗАЦИЯ")
-    login = input("Введите логин: ")
-    password = input("Введите пароль: ")
-    result, code = send_post("http://localhost:8000/users/auth", {"login": login, "password": password})
-    
-    if code == 200 and result:
-        user_data = json.loads(result)
-        current_session_token = user_data['session_token']
-        current_technical_token = user_data['token']
-        current_user_login = user_data['login']
+    while True:
+        print("\nАВТОРИЗАЦИЯ")
+        login = input("Введите логин: ")
+        password = input("Введите пароль: ")
+        result, code = send_post("http://localhost:8000/users/auth", {"login": login, "password": password})
         
-        print(f"Авторизация успешна! Добро пожаловать, {current_user_login}!")
-        return True
-    elif code == 401:
-        print("Ошибка авторизации: Неверный логин или пароль")
-        return False
-    else:
-        print(f"Ошибка при авторизации: {code}")
-        return False
+        if code == 200 and result:
+            user_data = json.loads(result)
+            current_session_token = user_data['session_token']
+            current_technical_token = user_data['token']
+            current_user_login = user_data['login']
+            
+            print(f"Авторизация успешна! Добро пожаловать, {current_user_login}!")
+            return True
+        elif code == 401:
+            print("Ошибка авторизации: Неверный логин или пароль. Попробуйте снова.")
+        else:
+            print(f"Ошибка при авторизации: {code}. Попробуйте снова.")
 
 def solve_tsp():
     print("\nРЕШЕНИЕ ЗАДАЧИ TSP")
